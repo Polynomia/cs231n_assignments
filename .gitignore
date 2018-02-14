@@ -1,3 +1,19 @@
+####################################
+######## OS generated files ########
+####################################
+.DS_Store
+.DS_Store?
+*.swp
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+
+cifar-10-batches-py/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
