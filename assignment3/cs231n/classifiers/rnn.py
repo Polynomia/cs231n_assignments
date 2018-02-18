@@ -137,7 +137,33 @@ class CaptioningRNN(object):
         # defined above to store loss and gradients; grads[k] should give the      #
         # gradients for self.params[k].                                            #
         ############################################################################
-        pass
+        # forward
+        # affine hidden state(N,D) -> (N,H)
+        affine, cache_affine = affine_forward(features, W_proj, b_proj)
+        # word embedding
+        embed, chahe_embed = word_embedding_forward(captions_in, W_embed)
+        # rnn
+        if self.cell_type == 'rnn':
+            h, cache_rnn = rnn_forward(embed, affine, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+            h, cache_rnn = lstm_forward(embed, affine, Wx, Wh, b)
+        # temporal_affine
+        h_affine, cache_h_affine = temporal_affine_forward(h, W_vocab, b_vocab)
+        # softmax
+        loss, dx = temporal_softmax_loss(h_affine, captions_out, mask)
+        
+        # backward
+        # temporal_affine bp
+        dx, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dx, cache_h_affine)
+        # rnn bp
+        if self.cell_type == 'rnn':
+            dx, dh, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dx, cache_rnn)
+        elif self.cell_type == 'lstm':
+            dx, dh, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(dx, cache_rnn)
+        # word embed bp
+        grads['W_embed'] = word_embedding_backward(dx, chahe_embed)
+        # affine bp
+        dx, grads['W_proj'], grads['b_proj'] = affine_backward(dh, cache_affine)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -199,7 +225,29 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
-        pass
+        # affine hidden state(N,D) -> (N,H)
+        affine, cache_affine = affine_forward(features, W_proj, b_proj)
+        prev_h = affine
+        captions[:,0] = self._start
+        x = [self._start] * N
+        if self.cell_type == 'lstm':
+            prev_c = np.zeros(prev_h.shape)
+        # for each step
+        for t in range(1,max_length):
+            # word embed
+            embed, chahe_embed = word_embedding_forward(x, W_embed)
+            # rnn step
+            if self.cell_type == 'rnn':
+                next_h, cache = rnn_step_forward(embed, prev_h, Wx, Wh, b)
+            elif self.cell_type == 'lstm':
+                next_h, next_c, cache = lstm_step_forward(embed, prev_h, prev_c, Wx, Wh, b)
+                prev_c = next_c
+            prev_h = next_h
+            # affine
+            h_affine, cache_h_affine = affine_forward(next_h, W_vocab, b_vocab)
+            # max
+            x = np.argmax(h_affine, axis=1)
+            captions[:,t] = x
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
