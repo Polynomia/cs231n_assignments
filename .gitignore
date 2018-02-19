@@ -11,6 +11,8 @@ Icon?
 ehthumbs.db
 Thumbs.db
 
+squeezenet.ckpt
+
 cyp/
 
 cifar-10-batches-py/
